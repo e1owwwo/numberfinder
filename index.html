@@ -85,29 +85,23 @@
     })
     .catch(error => console.error("Ошибка при чтении файла Excel:", error));
 
-  // Функция фильтрации таблицы
-  function applyFilters() {
-    const query = document.getElementById("search-input").value;
+  // Функция фильтрации по выбранной колонке
+  function applyFilterByColumn() {
+    const query = document.getElementById("search-input").value.trim();
     const column = document.getElementById("column-filter").value;
 
-    // Удаляем все фильтры перед установкой новых
+    // Очищаем все предыдущие фильтры
     table.clearFilter();
 
-    // Если указан текст для поиска
-    if (query) {
-      if (column) {
-        // Фильтрация по конкретной колонке
-        table.setFilter(column, "like", query);
-      } else {
-        // Фильтрация по всем колонкам
-        table.setFilter("any", "like", query);
-      }
+    // Применяем фильтр только если выбрана колонка и есть текст для поиска
+    if (column && query) {
+      table.setFilter(column, "like", query);
     }
   }
 
   // Обработка событий поиска и фильтрации
-  document.getElementById("search-input").addEventListener("input", applyFilters);
-  document.getElementById("column-filter").addEventListener("change", applyFilters);
+  document.getElementById("search-input").addEventListener("input", applyFilterByColumn);
+  document.getElementById("column-filter").addEventListener("change", applyFilterByColumn);
 </script>
 </body>
 </html>
