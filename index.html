@@ -18,11 +18,17 @@
       padding: 10px;
       box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
       z-index: 1000;
+      display: flex;
+      justify-content: space-between;
     }
     #data-table {
       margin-top: 80px; /* Отступ для фиксированной панели */
     }
-    input {
+    #page-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    input, select, button {
       padding: 5px;
       margin-right: 10px;
       border: 1px solid #ccc;
@@ -32,81 +38,87 @@
 </head>
 <body>
   <div id="filter-panel">
-    <label for="search-input">Поиск:</label>
-    <input type="text" id="search-input" placeholder="Введите текст для поиска">
-    <label for="column-filter">Фильтр по колонке:</label>
-    <select id="column-filter">
-      <option value="">Выберите колонку</option>
-    </select>
+    <div>
+      <label for="search-input">Поиск:</label>
+      <input type="text" id="search-input" placeholder="Введите текст для поиска">
+      <label for="column-filter">Фильтр по колонке:</label>
+      <select id="column-filter">
+        <option value="">Выберите колонку</option>
+      </select>
+    </div>
+    <div id="page-buttons">
+      <button onclick="loadPage('page1.html')">Страница 1</button>
+      <button onclick="loadPage('page2.html')">Страница 2</button>
+    </div>
   </div>
 
   <h1>Просмотр Excel-таблицы</h1>
   <div id="data-table"></div>
 
+  <div id="ajax-content"></div> <!-- Контейнер для загруженного контента -->
+
   <script src="xlsx.full.min.js"></script>
   <script src="tabulator.min.js"></script>
- <script>
-  // Путь к Excel-файлу
-  const filePath = 'data.xlsx';
+  <script>
+    // Путь к Excel-файлу
+    const filePath = 'data.xlsx';
+    let table;
 
-  let table;
+    // Чтение Excel-файла и загрузка таблицы
+    fetch(filePath)
+      .then(response => response.arrayBuffer())
+      .then(data => {
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-  // Чтение Excel-файла
-  fetch(filePath)
-    .then(response => response.arrayBuffer())
-    .then(data => {
-      // Парсинг Excel файла
-      const workbook = XLSX.read(data, { type: "array" });
-
-      // Выбор первого листа
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-
-      // Преобразование данных листа в JSON
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-      // Инициализация таблицы Tabulator
-      table = new Tabulator("#data-table", {
-        data: jsonData,
-        autoColumns: true,
-        layout: "fitData",
-        pagination: "local",
-        paginationSize: 10,
-      });
-
-      // Ожидаем полной загрузки таблицы перед заполнением списка колонок
-      table.on("dataLoaded", function () {
-        const columnFilter = document.getElementById("column-filter");
-        table.getColumns().forEach(column => {
-          const fieldName = column.getField();
-          if (fieldName) {
-            const option = document.createElement("option");
-            option.value = fieldName;
-            option.textContent = fieldName;
-            columnFilter.appendChild(option);
-          }
+        table = new Tabulator("#data-table", {
+          data: jsonData,
+          autoColumns: true,
+          layout: "fitData",
+          pagination: "local",
+          paginationSize: 10,
         });
-      });
-    })
-    .catch(error => console.error("Ошибка при чтении файла Excel:", error));
 
-  // Функция фильтрации по выбранной колонке
-  function applyFilterByColumn() {
-    const query = document.getElementById("search-input").value.trim();
-    const column = document.getElementById("column-filter").value;
+        // Заполнение выпадающего списка колонок
+        table.on("dataLoaded", function () {
+          const columnFilter = document.getElementById("column-filter");
+          table.getColumns().forEach(column => {
+            const fieldName = column.getField();
+            if (fieldName) {
+              const option = document.createElement("option");
+              option.value = fieldName;
+              option.textContent = fieldName;
+              columnFilter.appendChild(option);
+            }
+          });
+        });
+      })
+      .catch(error => console.error("Ошибка при чтении файла Excel:", error));
 
-    // Очищаем все предыдущие фильтры
-    table.clearFilter();
-
-    // Применяем фильтр только если выбрана колонка и есть текст для поиска
-    if (column && query) {
-      table.setFilter(column, "like", query);
+    // Фильтрация по выбранной колонке
+    function applyFilterByColumn() {
+      const query = document.getElementById("search-input").value.trim();
+      const column = document.getElementById("column-filter").value;
+      table.clearFilter();
+      if (column && query) {
+        table.setFilter(column, "like", query);
+      }
     }
-  }
 
-  // Обработка событий поиска и фильтрации
-  document.getElementById("search-input").addEventListener("input", applyFilterByColumn);
-  document.getElementById("column-filter").addEventListener("change", applyFilterByColumn);
- </script>
+    document.getElementById("search-input").addEventListener("input", applyFilterByColumn);
+    document.getElementById("column-filter").addEventListener("change", applyFilterByColumn);
+
+    // Функция загрузки страниц через AJAX
+    function loadPage(url) {
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById("ajax-content").innerHTML = data;
+        })
+        .catch(error => console.error("Ошибка при загрузке страницы:", error));
+    }
+  </script>
 </body>
 </html>
