@@ -45,63 +45,69 @@
 
   <script src="xlsx.full.min.js"></script>
   <script src="tabulator.min.js"></script>
-  <script>
-    // Путь к Excel-файлу
-    const filePath = 'data.xlsx';
+ <script>
+  // Путь к Excel-файлу
+  const filePath = 'data.xlsx';
 
-    let table;
+  let table;
 
-    // Чтение Excel-файла
-    fetch(filePath)
-      .then(response => response.arrayBuffer())
-      .then(data => {
-        // Парсинг Excel файла
-        const workbook = XLSX.read(data, { type: "array" });
+  // Чтение Excel-файла
+  fetch(filePath)
+    .then(response => response.arrayBuffer())
+    .then(data => {
+      // Парсинг Excel файла
+      const workbook = XLSX.read(data, { type: "array" });
 
-        // Выбор первого листа
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
+      // Выбор первого листа
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
 
-        // Преобразование данных листа в JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      // Преобразование данных листа в JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        // Инициализация таблицы Tabulator
-        table = new Tabulator("#data-table", {
-          data: jsonData, // Данные для таблицы
-          autoColumns: true, // Автоматическое создание колонок на основе данных
-          layout: "fitData", // Автоматическая подгонка ширины колонок
-          pagination: "local", // Локальная пагинация
-          paginationSize: 10, // Количество записей на страницу
-        });
+      // Инициализация таблицы Tabulator
+      table = new Tabulator("#data-table", {
+        data: jsonData,
+        autoColumns: true,
+        layout: "fitData",
+        pagination: "local",
+        paginationSize: 10,
+      });
 
-        // Заполнение выпадающего списка колонками
-        const columnFilter = document.getElementById("column-filter");
-        table.getColumns().forEach(column => {
-          const option = document.createElement("option");
-          option.value = column.getField();
-          option.textContent = column.getField();
-          columnFilter.appendChild(option);
-        });
-      })
-      .catch(error => console.error("Ошибка при чтении файла Excel:", error));
+      // Заполнение выпадающего списка колонками после загрузки таблицы
+      const columnFilter = document.getElementById("column-filter");
+      table.getColumns().forEach(column => {
+        const option = document.createElement("option");
+        option.value = column.getField();
+        option.textContent = column.getField();
+        columnFilter.appendChild(option);
+      });
+    })
+    .catch(error => console.error("Ошибка при чтении файла Excel:", error));
 
-    // Поиск по таблице
-    document.getElementById("search-input").addEventListener("input", function () {
-      const query = this.value;
-      table.setFilter("any", "like", query);
-    });
+  // Функция фильтрации таблицы
+  function applyFilters() {
+    const query = document.getElementById("search-input").value;
+    const column = document.getElementById("column-filter").value;
 
-    // Фильтрация по колонке
-    document.getElementById("column-filter").addEventListener("change", function () {
-      const column = this.value;
-      const searchInput = document.getElementById("search-input").value;
+    // Удаляем все фильтры перед установкой новых
+    table.clearFilter();
 
+    // Если указан текст для поиска
+    if (query) {
       if (column) {
-        table.setFilter(column, "like", searchInput);
+        // Фильтрация по конкретной колонке
+        table.setFilter(column, "like", query);
       } else {
-        table.setFilter("any", "like", searchInput);
+        // Фильтрация по всем колонкам
+        table.setFilter("any", "like", query);
       }
-    });
-  </script>
+    }
+  }
+
+  // Обработка событий поиска и фильтрации
+  document.getElementById("search-input").addEventListener("input", applyFilters);
+  document.getElementById("column-filter").addEventListener("change", applyFilters);
+</script>
 </body>
 </html>
