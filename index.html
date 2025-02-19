@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel Viewer</title>
+  <link href="tabulator.min.css" rel="stylesheet">
+  <style>
+    #data-table {
+      margin: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Просмотр Excel-таблицы</h1>
+  <div id="data-table"></div>
+
+  <script src="xlsx.full.min.js"></script>
+  <script src="tabulator.min.js"></script>
+  <script>
+    // Путь к Excel-файлу
+    const filePath = 'data.xlsx';
+
+    // Чтение Excel-файла
+    fetch(filePath)
+      .then(response => response.arrayBuffer())
+      .then(data => {
+        // Парсинг Excel файла
+        const workbook = XLSX.read(data, { type: "array" });
+        
+        // Выбор первого листа
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Преобразование данных листа в JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        // Инициализация таблицы Tabulator
+        new Tabulator("#data-table", {
+          data: jsonData, // Данные для таблицы
+          autoColumns: true, // Автоматическое создание колонок на основе данных
+          layout: "fitData", // Автоматическая подгонка ширины колонок
+          pagination: "local", // Локальная пагинация
+          paginationSize: 10 // Количество записей на страницу
+        });
+      })
+      .catch(error => console.error("Ошибка при чтении файла Excel:", error));
+  </script>
+</body>
+</html>
