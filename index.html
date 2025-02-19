@@ -74,13 +74,18 @@
         paginationSize: 10,
       });
 
-      // Заполнение выпадающего списка колонками после загрузки таблицы
-      const columnFilter = document.getElementById("column-filter");
-      table.getColumns().forEach(column => {
-        const option = document.createElement("option");
-        option.value = column.getField();
-        option.textContent = column.getField();
-        columnFilter.appendChild(option);
+      // Ожидаем полной загрузки таблицы перед заполнением списка колонок
+      table.on("dataLoaded", function () {
+        const columnFilter = document.getElementById("column-filter");
+        table.getColumns().forEach(column => {
+          const fieldName = column.getField();
+          if (fieldName) {
+            const option = document.createElement("option");
+            option.value = fieldName;
+            option.textContent = fieldName;
+            columnFilter.appendChild(option);
+          }
+        });
       });
     })
     .catch(error => console.error("Ошибка при чтении файла Excel:", error));
@@ -102,6 +107,6 @@
   // Обработка событий поиска и фильтрации
   document.getElementById("search-input").addEventListener("input", applyFilterByColumn);
   document.getElementById("column-filter").addEventListener("change", applyFilterByColumn);
-</script>
+ </script>
 </body>
 </html>
