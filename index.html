@@ -3,15 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Excel Viewer</title>
+  <title>Просмотр Excel-таблицы</title>
   <link href="tabulator.min.css" rel="stylesheet">
   <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #filter-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background-color: #f1f1f1;
+      padding: 10px;
+      box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
     #data-table {
-      margin: 20px;
+      margin-top: 80px; /* Отступ для фиксированной панели */
+    }
+    input {
+      padding: 5px;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
     }
   </style>
 </head>
 <body>
+  <div id="filter-panel">
+    <label for="search-input">Поиск:</label>
+    <input type="text" id="search-input" placeholder="Введите текст для поиска">
+    <label for="column-filter">Фильтр по колонке:</label>
+    <select id="column-filter">
+      <option value="">Выберите колонку</option>
+    </select>
+  </div>
+
   <h1>Просмотр Excel-таблицы</h1>
   <div id="data-table"></div>
 
@@ -21,30 +49,59 @@
     // Путь к Excel-файлу
     const filePath = 'data.xlsx';
 
+    let table;
+
     // Чтение Excel-файла
     fetch(filePath)
       .then(response => response.arrayBuffer())
       .then(data => {
         // Парсинг Excel файла
         const workbook = XLSX.read(data, { type: "array" });
-        
+
         // Выбор первого листа
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        
+
         // Преобразование данных листа в JSON
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         // Инициализация таблицы Tabulator
-        new Tabulator("#data-table", {
+        table = new Tabulator("#data-table", {
           data: jsonData, // Данные для таблицы
           autoColumns: true, // Автоматическое создание колонок на основе данных
           layout: "fitData", // Автоматическая подгонка ширины колонок
           pagination: "local", // Локальная пагинация
-          paginationSize: 10 // Количество записей на страницу
+          paginationSize: 10, // Количество записей на страницу
+        });
+
+        // Заполнение выпадающего списка колонками
+        const columnFilter = document.getElementById("column-filter");
+        table.getColumns().forEach(column => {
+          const option = document.createElement("option");
+          option.value = column.getField();
+          option.textContent = column.getField();
+          columnFilter.appendChild(option);
         });
       })
       .catch(error => console.error("Ошибка при чтении файла Excel:", error));
+
+    // Поиск по таблице
+    document.getElementById("search-input").addEventListener("input", function () {
+      const query = this.value;
+      table.setFilter("any", "like", query);
+    });
+
+    // Фильтрация по колонке
+    document.getElementById("column-filter").addEventListener("change", function () {
+      const column = this.value;
+      const searchInput = document.getElementById("search-input").value;
+
+      if (column) {
+        table.setFilter(column, "like", searchInput);
+      } else {
+        table.setFilter("any", "like", searchInput);
+      }
+    });
   </script>
 </body>
 </html>
