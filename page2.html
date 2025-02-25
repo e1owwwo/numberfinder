@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link href="tabulator.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #filter-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background-color: #f1f1f1;
+      padding: 10px;
+      box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+    }
+    #data-table {
+      margin-top: 80px; /* Отступ для фиксированной панели */
+    }
+    #page-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    input, select, button {
+      padding: 5px;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div id="filter-panel">
+    <div>
+      <label for="search-input">Поиск:</label>
+      <input type="text" id="search-input" placeholder="Введите текст для поиска">
+      <label for="column-filter">Фильтр по колонке:</label>
+      <select id="column-filter">
+        <option value="">Выберите колонку</option>
+      </select>
+    </div>
+    <div id="page-buttons">
+      <button onclick="loadPage('page1.html')">Страница 1</button>
+      <button onclick="loadPage('page2.html')">Страница 2</button>
+    </div>
+  </div>
+
+  <h1>Просмотр Excel-таблицы</h1>
+  <div id="data-table"></div>
+
+  <div id="ajax-content"></div> <!-- Контейнер для загруженного контента -->
+
+  <script src="xlsx.full.min.js"></script>
+  <script src="tabulator.min.js"></script>
+  <script>
+    // Путь к Excel-файлу
+    const filePath = 'data_ta.xlsx';
+    let table;
+
+    // Чтение Excel-файла и загрузка таблицы
+    fetch(filePath)
+      .then(response => response.arrayBuffer())
+      .then(data => {
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        table = new Tabulator("#data-table", {
+          data: jsonData,
+          autoColumns: true,
+          layout: "fitData",
+          pagination: "local",
+          paginationSize: 10,
+        });
+
+        // Заполнение выпадающего списка колонок
+        table.on("dataLoaded", function () {
+          const columnFilter = document.getElementById("column-filter");
+          table.getColumns().forEach(column => {
+            const fieldName = column.getField();
+            if (fieldName) {
+              const option = document.createElement("option");
+              option.value = fieldName;
+              option.textContent = fieldName;
+              columnFilter.appendChild(option);
+            }
+          });
+        });
+      })
+      .catch(error => console.error("Ошибка при чтении файла Excel:", error));
+
+    // Фильтрация по выбранной колонке
+    function applyFilterByColumn() {
+      const query = document.getElementById("search-input").value.trim();
+      const column = document.getElementById("column-filter").value;
+      table.clearFilter();
+      if (column && query) {
+        table.setFilter(column, "like", query);
+      }
+    }
+
+    document.getElementById("search-input").addEventListener("input", applyFilterByColumn);
+    document.getElementById("column-filter").addEventListener("change", applyFilterByColumn);
+
+    // Функция загрузки страниц через AJAX
+    function loadPage(url) {
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById("ajax-content").innerHTML = data;
+        })
+        .catch(error => console.error("Ошибка при загрузке страницы:", error));
+    }
+  </script>
+</body>
+</html>
